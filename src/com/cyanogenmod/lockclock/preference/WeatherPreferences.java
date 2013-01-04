@@ -36,7 +36,6 @@ import android.preference.EditTextPreference;
 import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.Preference.OnPreferenceClickListener;
-import android.preference.PreferenceActivity;
 import android.preference.PreferenceFragment;
 import android.provider.Settings;
 import android.view.View;
@@ -57,6 +56,7 @@ public class WeatherPreferences extends PreferenceFragment implements
     private CheckBoxPreference mUseMetric;
     private CheckBoxPreference mShowLocation;
     private CheckBoxPreference mShowTimestamp;
+    private CheckBoxPreference mUseAlternateIcons;
     private EditTextPreference mCustomWeatherLoc;
 
     private Context mContext;
@@ -81,6 +81,8 @@ public class WeatherPreferences extends PreferenceFragment implements
         mShowLocation.setChecked(prefs.getBoolean(Constants.WEATHER_SHOW_LOCATION, true));
         mShowTimestamp = (CheckBoxPreference) findPreference(Constants.WEATHER_SHOW_TIMESTAMP);
         mShowTimestamp.setChecked(prefs.getBoolean(Constants.WEATHER_SHOW_TIMESTAMP, true));
+        mUseAlternateIcons = (CheckBoxPreference) findPreference(Constants.WEATHER_USE_ALTERNATE_ICONS);
+        mUseAlternateIcons.setChecked(prefs.getBoolean(Constants.WEATHER_USE_ALTERNATE_ICONS, false));
 
         // Load items that need custom summaries etc.
         mUseCustomLoc = (CheckBoxPreference) findPreference(Constants.WEATHER_USE_CUSTOM_LOCATION);

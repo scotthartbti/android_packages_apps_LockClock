@@ -125,11 +125,13 @@ public class ClockWidgetService extends Service {
                 setWeatherData(mWeatherInfo);
             }
         } else {
-            // Hide the weather panel and update the rest of the widget
-            RemoteViews remoteViews = new RemoteViews(mContext.getPackageName(), R.layout.digital_appwidget);
-            remoteViews.setViewVisibility(R.id.weather_panel, View.GONE);
-            updateAndExit(remoteViews);
+            updateAndExit();
         }
+    }
+
+    private void updateAndExit() {
+        RemoteViews remoteViews = new RemoteViews(mContext.getPackageName(), R.layout.digital_appwidget);
+        updateAndExit(remoteViews);
     }
 
     /**
@@ -163,12 +165,31 @@ public class ClockWidgetService extends Service {
     // Clock related functionality
     //===============================================================================================
     private void refreshClockFont(RemoteViews clockViews) {
-        if (!mSharedPrefs.getBoolean(Constants.CLOCK_FONT, true)) {
-            clockViews.setViewVisibility(R.id.the_clock1_regular, View.VISIBLE);
-            clockViews.setViewVisibility(R.id.the_clock1, View.GONE);
+        // Hours
+        if (mSharedPrefs.getBoolean(Constants.CLOCK_FONT, true)) {
+            clockViews.setViewVisibility(R.id.clock1_bold, View.VISIBLE);
+            clockViews.setViewVisibility(R.id.clock1_regular, View.GONE);
         } else {
-            clockViews.setViewVisibility(R.id.the_clock1_regular, View.GONE);
-            clockViews.setViewVisibility(R.id.the_clock1, View.VISIBLE);
+            clockViews.setViewVisibility(R.id.clock1_regular, View.VISIBLE);
+            clockViews.setViewVisibility(R.id.clock1_bold, View.GONE);
+        }
+
+        // Minutes
+        if (mSharedPrefs.getBoolean(Constants.CLOCK_FONT_MINUTES, false)) {
+            clockViews.setViewVisibility(R.id.clock2_bold, View.VISIBLE);
+            clockViews.setViewVisibility(R.id.clock2_regular, View.GONE);
+        } else {
+            clockViews.setViewVisibility(R.id.clock2_regular, View.VISIBLE);
+            clockViews.setViewVisibility(R.id.clock2_bold, View.GONE);
+        }
+
+        // Date
+        if (mSharedPrefs.getBoolean(Constants.CLOCK_FONT_DATE, true)) {
+            clockViews.setViewVisibility(R.id.date_bold, View.VISIBLE);
+            clockViews.setViewVisibility(R.id.date_regular, View.GONE);
+        } else {
+            clockViews.setViewVisibility(R.id.date_regular, View.VISIBLE);
+            clockViews.setViewVisibility(R.id.date_bold, View.GONE);
         }
 
         // Register an onClickListener on Clock, starting DeskClock
@@ -180,9 +201,10 @@ public class ClockWidgetService extends Service {
 
     private void setClockSize(RemoteViews clockViews, float scale) {
         float fontSize = mContext.getResources().getDimension(R.dimen.widget_big_font_size);
-        clockViews.setTextViewTextSize(R.id.the_clock1, TypedValue.COMPLEX_UNIT_PX, fontSize * scale);
-        clockViews.setTextViewTextSize(R.id.the_clock1_regular, TypedValue.COMPLEX_UNIT_PX, fontSize * scale);
-        clockViews.setTextViewTextSize(R.id.the_clock2, TypedValue.COMPLEX_UNIT_PX, fontSize * scale);
+        clockViews.setTextViewTextSize(R.id.clock1_bold, TypedValue.COMPLEX_UNIT_PX, fontSize * scale);
+        clockViews.setTextViewTextSize(R.id.clock1_regular, TypedValue.COMPLEX_UNIT_PX, fontSize * scale);
+        clockViews.setTextViewTextSize(R.id.clock2_bold, TypedValue.COMPLEX_UNIT_PX, fontSize * scale);
+        clockViews.setTextViewTextSize(R.id.clock2_regular, TypedValue.COMPLEX_UNIT_PX, fontSize * scale);
     }
 
     //===============================================================================================
@@ -190,25 +212,30 @@ public class ClockWidgetService extends Service {
     //===============================================================================================
     private void refreshAlarmStatus(RemoteViews alarmViews) {
         boolean showAlarm = mSharedPrefs.getBoolean(Constants.CLOCK_SHOW_ALARM, true);
+        boolean isBold = mSharedPrefs.getBoolean(Constants.CLOCK_FONT_DATE, true);
 
         // Update Alarm status
         if (showAlarm) {
             String nextAlarm = getNextAlarm();
             if (!TextUtils.isEmpty(nextAlarm)) {
-                alarmViews.setTextViewText(R.id.nextAlarm, nextAlarm.toString().toUpperCase());
-                alarmViews.setViewVisibility(R.id.nextAlarm, View.VISIBLE);
-            } else {
-                alarmViews.setViewVisibility(R.id.nextAlarm, View.GONE);
+                // An alarm is set, deal with displaying it
+                alarmViews.setTextViewText(isBold ? R.id.nextAlarm_bold : R.id.nextAlarm_regular,
+                        nextAlarm.toString().toUpperCase());
+                alarmViews.setViewVisibility(R.id.nextAlarm_bold, isBold ? View.VISIBLE : View.GONE);
+                alarmViews.setViewVisibility(R.id.nextAlarm_regular, isBold ? View.GONE : View.VISIBLE);
+                return;
             }
-        } else {
-            alarmViews.setViewVisibility(R.id.nextAlarm, View.GONE);
         }
+
+        // No alarm set or Alarm display is hidden, hide the views
+        alarmViews.setViewVisibility(R.id.nextAlarm_bold, View.GONE);
+        alarmViews.setViewVisibility(R.id.nextAlarm_regular, View.GONE);
     }
 
     /**
      * @return A formatted string of the next alarm or null if there is no next alarm.
      */
-    public String getNextAlarm() {
+    private String getNextAlarm() {
         String nextAlarm = Settings.System.getString(mContext.getContentResolver(),
                 Settings.System.NEXT_ALARM_FORMATTED);
         if (nextAlarm == null || TextUtils.isEmpty(nextAlarm)) {
@@ -326,14 +353,18 @@ public class ClockWidgetService extends Service {
         boolean showLocation = mSharedPrefs.getBoolean(Constants.WEATHER_SHOW_LOCATION, true);
         boolean showTimestamp = mSharedPrefs.getBoolean(Constants.WEATHER_SHOW_TIMESTAMP, true);
         boolean invertLowhigh = mSharedPrefs.getBoolean(Constants.WEATHER_INVERT_LOWHIGH, false);
+        boolean defaultIcons = !mSharedPrefs.getBoolean(Constants.WEATHER_USE_ALTERNATE_ICONS, false);
 
         // Get the views ready
         RemoteViews weatherViews = new RemoteViews(mContext.getPackageName(), R.layout.digital_appwidget);
 
-        // Weather Image
-        final Resources res = getBaseContext().getResources();
+        // Weather Image - Either the default or alternate set
+        String prefix = defaultIcons ? "weather_" : "weather2_";
         String conditionCode = w.condition_code;
-        String condition_filename = "weather_" + conditionCode;
+        String condition_filename = prefix + conditionCode;
+
+        // Get the resource id based on the constructed name
+        final Resources res = getBaseContext().getResources();
         int resID = res.getIdentifier(condition_filename, "drawable",
                 getBaseContext().getPackageName());
 
@@ -343,7 +374,8 @@ public class ClockWidgetService extends Service {
         if (resID != 0) {
             weatherViews.setImageViewResource(R.id.weather_image, resID);
         } else {
-            weatherViews.setImageViewResource(R.id.weather_image, R.drawable.weather_na);
+            weatherViews.setImageViewResource(R.id.weather_image,
+                    defaultIcons ? R.drawable.weather_na : R.drawable.weather2_na);
         }
 
         // City
@@ -369,9 +401,6 @@ public class ClockWidgetService extends Service {
         weatherViews.setTextViewText(R.id.weather_low_high, invertLowhigh ? w.high + " | " + w.low : w.low + " | " + w.high);
         weatherViews.setViewVisibility(R.id.weather_temps_panel, View.VISIBLE);
 
-        // Make sure the Weather panel is visible
-        weatherViews.setViewVisibility(R.id.weather_panel, View.VISIBLE);
-
         // Register an onClickListener on Weather
         setWeatherClickListener(weatherViews);
 
@@ -384,19 +413,21 @@ public class ClockWidgetService extends Service {
      * 'Tap to reload' message
      */
     private void setNoWeatherData() {
+        boolean defaultIcons = !mSharedPrefs.getBoolean(Constants.WEATHER_USE_ALTERNATE_ICONS, false);
+
         final Resources res = getBaseContext().getResources();
         RemoteViews weatherViews = new RemoteViews(mContext.getPackageName(), R.layout.digital_appwidget);
 
-        // Update the appropriate views
-        weatherViews.setImageViewResource(R.id.weather_image, R.drawable.weather_na);
+        // Weather Image - Either the default or alternate set
+        weatherViews.setImageViewResource(R.id.weather_image,
+                defaultIcons ? R.drawable.weather_na : R.drawable.weather2_na);
+
+        // Rest of the data
         weatherViews.setTextViewText(R.id.weather_city, res.getString(R.string.weather_no_data));
         weatherViews.setViewVisibility(R.id.weather_city, View.VISIBLE);
         weatherViews.setTextViewText(R.id.weather_condition, res.getString(R.string.weather_tap_to_refresh));
         weatherViews.setViewVisibility(R.id.update_time, View.GONE);
         weatherViews.setViewVisibility(R.id.weather_temps_panel, View.GONE);
-
-        // Make sure the Weather panel is visible
-        weatherViews.setViewVisibility(R.id.weather_panel, View.VISIBLE);
 
         // Register an onClickListener on Weather
         setWeatherClickListener(weatherViews);
@@ -422,18 +453,15 @@ public class ClockWidgetService extends Service {
         try {
             boolean celcius = mSharedPrefs.getBoolean(Constants.WEATHER_USE_METRIC, true);
             String urlWithDegreeUnit;
-
             if (celcius) {
                 urlWithDegreeUnit = URL_YAHOO_API_WEATHER + "c";
             } else {
                 urlWithDegreeUnit = URL_YAHOO_API_WEATHER + "f";
             }
-
             return new HttpRetriever().getDocumentFromURL(String.format(urlWithDegreeUnit, woeid));
         } catch (IOException e) {
             Log.e(TAG, "Error querying Yahoo weather");
         }
-
         return null;
     }
 
@@ -451,26 +479,26 @@ public class ClockWidgetService extends Service {
         }
         return null;
     }
-    
 
     //===============================================================================================
     // Calendar related functionality
     //===============================================================================================
     private void refreshCalendar(RemoteViews calendarViews) {
         // Load the settings
-        boolean lockCalendar = mSharedPrefs.getBoolean(Constants.SHOW_CALENDAR, false);
-        Set<String> calendars = mSharedPrefs.getStringSet(Constants.CALENDAR_LIST, null);
-        boolean lockCalendarRemindersOnly = mSharedPrefs.getBoolean(Constants.CALENDAR_REMINDERS_ONLY, false);
-        long lockCalendarLookahead = Long.parseLong(mSharedPrefs.getString(Constants.CALENDAR_LOOKAHEAD, "10800000"));
+        boolean showCalendar = mSharedPrefs.getBoolean(Constants.SHOW_CALENDAR, false);
+        Set<String> calendarList = mSharedPrefs.getStringSet(Constants.CALENDAR_LIST, null);
+        boolean remindersOnly = mSharedPrefs.getBoolean(Constants.CALENDAR_REMINDERS_ONLY, false);
+        boolean hideAllDay = mSharedPrefs.getBoolean(Constants.CALENDAR_HIDE_ALLDAY, false);
+        long lookAhead = Long.parseLong(mSharedPrefs.getString(Constants.CALENDAR_LOOKAHEAD, "10800000"));
 
         // Assume we are not showing the views
         mEvent1Visible = false;
         boolean event2Visible = false;
         boolean event3Visible = false;
 
-        if (lockCalendar) {
+        if (showCalendar) {
             String[][] nextCalendar = null;
-            nextCalendar = getNextCalendarAlarm(lockCalendarLookahead, calendars, lockCalendarRemindersOnly);
+            nextCalendar = getNextCalendarAlarm(lookAhead, calendarList, remindersOnly, hideAllDay);
             // Iterate through the calendars, up to the maximum
             for (int i = 0; i < MAX_CALENDAR_ITEMS; i++) {
                 if (nextCalendar[i][0] != null) {
@@ -502,10 +530,8 @@ public class ClockWidgetService extends Service {
             calendarViews.setViewVisibility(R.id.calendar_event3, event3Visible ? View.VISIBLE : View.GONE);
         }
 
-        // Deal with overall panel visibility
-        calendarViews.setViewVisibility(R.id.calendar_panel, mEvent1Visible ? View.VISIBLE : View.GONE);
+        // Register an onClickListener on Calendar if it contains any events, starting the Calendar app
         if (mEvent1Visible) {
-            // Register an onClickListener on Calendar, starting the Calendar app
             ComponentName cal = new ComponentName("com.android.calendar", "com.android.calendar.AllInOneActivity");
             Intent i = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setComponent(cal);
             PendingIntent pi = PendingIntent.getActivity(mContext, 0, i, PendingIntent.FLAG_UPDATE_CURRENT);
@@ -519,10 +545,11 @@ public class ClockWidgetService extends Service {
      * within a certain look-ahead time.
      */
     private String[][] getNextCalendarAlarm(long lookahead, Set<String> calendars,
-            boolean remindersOnly) {
+            boolean remindersOnly, boolean hideAllDay) {
         long now = System.currentTimeMillis();
         long later = now + lookahead;
 
+        // Build the 'where' clause
         StringBuilder where = new StringBuilder();
         if (remindersOnly) {
             where.append(CalendarContract.Events.HAS_ALARM + "=1");
@@ -549,7 +576,8 @@ public class ClockWidgetService extends Service {
             CalendarContract.Instances.BEGIN,
             CalendarContract.Events.DESCRIPTION,
             CalendarContract.Events.EVENT_LOCATION,
-            CalendarContract.Events.ALL_DAY
+            CalendarContract.Events.ALL_DAY,
+            CalendarContract.Events.CALENDAR_ID
         };
 
         // The indices for the projection array
@@ -558,6 +586,7 @@ public class ClockWidgetService extends Service {
         int DESCRIPTION_INDEX = 2;
         int LOCATION_INDEX = 3;
         int ALL_DAY_INDEX = 4;
+        int CALENDAR_ID_INDEX = 5;
 
         Uri uri = Uri.withAppendedPath(CalendarContract.Instances.CONTENT_URI,
                 String.format("%d/%d", now, later));
@@ -570,14 +599,23 @@ public class ClockWidgetService extends Service {
 
             if (cursor != null) {
                 cursor.moveToFirst();
-
-                // Iterate through rows to a maximum number of calendar entries
-                for (int i = 0; i < cursor.getCount() && i < MAX_CALENDAR_ITEMS; i++) {
+                // Iterate through returned rows to a maximum number of calendar events
+                for (int i = 0, eventCount = 0; i < cursor.getCount() && eventCount < MAX_CALENDAR_ITEMS; i++) {
                     String title = cursor.getString(TITLE_INDEX);
                     long begin = cursor.getLong(BEGIN_TIME_INDEX);
                     String description = cursor.getString(DESCRIPTION_INDEX);
                     String location = cursor.getString(LOCATION_INDEX);
                     boolean allDay = cursor.getInt(ALL_DAY_INDEX) != 0;
+                    int calendarId = cursor.getInt(CALENDAR_ID_INDEX);
+                    if (DEBUG) {
+                        Log.d(TAG, "Event: " + title + " from calendar with id: " + calendarId);
+                    }
+
+                    // If skipping all day events, continue the loop without incementing eventCount
+                    if (allDay && hideAllDay) {
+                        cursor.moveToNext();
+                        continue;
+                    }
 
                     // Check the next event in the case of all day event. As UTC is used for all day
                     // events, the next event may be the one that actually starts sooner
@@ -596,7 +634,7 @@ public class ClockWidgetService extends Service {
                     }
 
                     // Set the event title as the first array item
-                    nextCalendarAlarm[i][0] = title.toString();
+                    nextCalendarAlarm[eventCount][0] = title.toString();
 
                     // Start building the event details string
                     // Starting with the date
@@ -665,8 +703,11 @@ public class ClockWidgetService extends Service {
                     }
 
                     // Set the time, location and description as the second array item
-                    nextCalendarAlarm[i][1] = sb.toString();
+                    nextCalendarAlarm[eventCount][1] = sb.toString();
                     cursor.moveToNext();
+
+                    // Increment the event counter
+                    eventCount++;
                 }
             }
         } catch (Exception e) {
