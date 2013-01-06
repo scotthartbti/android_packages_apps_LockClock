@@ -36,6 +36,22 @@
         <item>480</item>
     </string-array>
 
+    <string-array name="weather_icon_style_entries" translatable="false">
+        <item>@string/weather_icon_style_normal</item>
+        <item>@string/weather_icon_style_fancy</item>
+        <item>@string/weather_icon_style_whitehighres</item>
+        <item>@string/weather_icon_style_cm</item>
+        <item>@string/weather_icon_style_color</item>
+    </string-array>
+
+    <string-array name="weather_icon_style_values" translatable="false">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+    </string-array>
+
     <string-array name="calendar_lookahead_entries" translatable="false">
         <item>@string/calendar_lookahead_3hrs</item>
         <item>@string/calendar_lookahead_6hrs</item>

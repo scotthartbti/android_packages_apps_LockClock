@@ -71,6 +71,7 @@ public class ClockWidgetService extends Service {
     private SharedPreferences mSharedPrefs;
     private boolean mForceRefresh;
     private boolean mEvent1Visible = false;
+    private int weatherIconNa;
 
     @Override
     public void onCreate() {
@@ -135,7 +136,7 @@ public class ClockWidgetService extends Service {
     }
 
     /**
-     * Refresh Alarm and Calendar (if visible) and update the widget views 
+     * Refresh Alarm and Calendar (if visible) and update the widget views
      */
     private void updateAndExit(RemoteViews remoteViews) {
         refreshClockFont(remoteViews);
@@ -353,18 +354,32 @@ public class ClockWidgetService extends Service {
         boolean showLocation = mSharedPrefs.getBoolean(Constants.WEATHER_SHOW_LOCATION, true);
         boolean showTimestamp = mSharedPrefs.getBoolean(Constants.WEATHER_SHOW_TIMESTAMP, true);
         boolean invertLowhigh = mSharedPrefs.getBoolean(Constants.WEATHER_INVERT_LOWHIGH, false);
-        boolean defaultIcons = !mSharedPrefs.getBoolean(Constants.WEATHER_USE_ALTERNATE_ICONS, false);
+        int mWeatherStyleIcons = Integer.parseInt(mSharedPrefs.getString(Constants.WEATHER_ICON_STYLE, "0"));
 
         // Get the views ready
         RemoteViews weatherViews = new RemoteViews(mContext.getPackageName(), R.layout.digital_appwidget);
 
-        // Weather Image - Either the default or alternate set
-        String prefix = defaultIcons ? "weather_" : "weather2_";
-        String conditionCode = w.condition_code;
-        String condition_filename = prefix + conditionCode;
-
-        // Get the resource id based on the constructed name
+        // Weather Image
         final Resources res = getBaseContext().getResources();
+        String conditionCode = w.condition_code;
+        String condition_filename;
+        if (mWeatherStyleIcons == 1) {
+            condition_filename = "weather_fancy_" + conditionCode;
+            weatherIconNa = R.drawable.weather_fancy_na;
+        } else if (mWeatherStyleIcons == 2) {
+            condition_filename = "weather_white_highres_" + conditionCode;
+            weatherIconNa = R.drawable.weather_white_highres_na;
+        } else if (mWeatherStyleIcons == 3) {
+            condition_filename = "weather_cm_" + conditionCode;
+            weatherIconNa = R.drawable.weather_cm_na;
+        } else if (mWeatherStyleIcons == 4) {
+            condition_filename = "weather_color_" + conditionCode;
+            weatherIconNa = R.drawable.weather_color_na;
+        } else {
+            condition_filename = "weather_" + conditionCode;
+            weatherIconNa = R.drawable.weather_na;
+        }
+
         int resID = res.getIdentifier(condition_filename, "drawable",
                 getBaseContext().getPackageName());
 
@@ -374,8 +389,7 @@ public class ClockWidgetService extends Service {
         if (resID != 0) {
             weatherViews.setImageViewResource(R.id.weather_image, resID);
         } else {
-            weatherViews.setImageViewResource(R.id.weather_image,
-                    defaultIcons ? R.drawable.weather_na : R.drawable.weather2_na);
+            weatherViews.setImageViewResource(R.id.weather_image, weatherIconNa);
         }
 
         // City
@@ -413,16 +427,11 @@ public class ClockWidgetService extends Service {
      * 'Tap to reload' message
      */
     private void setNoWeatherData() {
-        boolean defaultIcons = !mSharedPrefs.getBoolean(Constants.WEATHER_USE_ALTERNATE_ICONS, false);
-
         final Resources res = getBaseContext().getResources();
         RemoteViews weatherViews = new RemoteViews(mContext.getPackageName(), R.layout.digital_appwidget);
 
-        // Weather Image - Either the default or alternate set
-        weatherViews.setImageViewResource(R.id.weather_image,
-                defaultIcons ? R.drawable.weather_na : R.drawable.weather2_na);
-
-        // Rest of the data
+        // Update the appropriate views
+        weatherViews.setImageViewResource(R.id.weather_image, weatherIconNa);
         weatherViews.setTextViewText(R.id.weather_city, res.getString(R.string.weather_no_data));
         weatherViews.setViewVisibility(R.id.weather_city, View.VISIBLE);
         weatherViews.setTextViewText(R.id.weather_condition, res.getString(R.string.weather_tap_to_refresh));

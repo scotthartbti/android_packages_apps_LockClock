@@ -56,7 +56,6 @@ public class WeatherPreferences extends PreferenceFragment implements
     private CheckBoxPreference mUseMetric;
     private CheckBoxPreference mShowLocation;
     private CheckBoxPreference mShowTimestamp;
-    private CheckBoxPreference mUseAlternateIcons;
     private EditTextPreference mCustomWeatherLoc;
 
     private Context mContext;
@@ -81,8 +80,6 @@ public class WeatherPreferences extends PreferenceFragment implements
         mShowLocation.setChecked(prefs.getBoolean(Constants.WEATHER_SHOW_LOCATION, true));
         mShowTimestamp = (CheckBoxPreference) findPreference(Constants.WEATHER_SHOW_TIMESTAMP);
         mShowTimestamp.setChecked(prefs.getBoolean(Constants.WEATHER_SHOW_TIMESTAMP, true));
-        mUseAlternateIcons = (CheckBoxPreference) findPreference(Constants.WEATHER_USE_ALTERNATE_ICONS);
-        mUseAlternateIcons.setChecked(prefs.getBoolean(Constants.WEATHER_USE_ALTERNATE_ICONS, false));
 
         // Load items that need custom summaries etc.
         mUseCustomLoc = (CheckBoxPreference) findPreference(Constants.WEATHER_USE_CUSTOM_LOCATION);
@@ -159,7 +156,7 @@ public class WeatherPreferences extends PreferenceFragment implements
     private void updateLocationSummary() {
         if (mUseCustomLoc.isChecked()) {
             SharedPreferences prefs = mContext.getSharedPreferences(PREF_NAME, Context.MODE_MULTI_PROCESS);
-            String location = prefs.getString(Constants.WEATHER_CUSTOM_LOCATION_STRING, 
+            String location = prefs.getString(Constants.WEATHER_CUSTOM_LOCATION_STRING,
                     getResources().getString(R.string.unknown));
             mCustomWeatherLoc.setSummary(location);
         } else {

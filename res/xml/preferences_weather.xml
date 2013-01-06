@@ -35,6 +35,13 @@
             android:entryValues="@array/weather_interval_values"
             android:title="@string/weather_refresh_interval" />
 
+        <ListPreference
+            android:key="weather_icon_style"
+            android:defaultValue="0"
+            android:entries="@array/weather_icon_style_entries"
+            android:entryValues="@array/weather_icon_style_values"
+            android:title="@string/weather_icon_style_title" />
+
         <CheckBoxPreference
             android:key="weather_use_custom_location"
             android:dependency="show_weather"
@@ -50,12 +57,6 @@
 
     <PreferenceCategory
         android:title="@string/display_category" >
-
-        <CheckBoxPreference
-            android:key="weather_use_alternate_icons"
-            android:dependency="show_weather"
-            android:title="@string/weather_alternate_icons_title"
-            android:summary="@string/weather_alternate_icons_summary" />
 
         <CheckBoxPreference
             android:key="weather_use_metric"
