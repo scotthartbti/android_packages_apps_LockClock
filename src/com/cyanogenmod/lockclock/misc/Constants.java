@@ -17,11 +17,9 @@
 package com.cyanogenmod.lockclock.misc;
 
 public class Constants {
-    public static final String PREF_NAME = "LockClock";
-    public static final String PREFERENCES_CHANGED = "preferences_changed";
+    public static final boolean DEBUG = false;
 
-    // Activity start commands
-    public static final String FORCE_REFRESH = "force_refresh";
+    public static final String PREF_NAME = "LockClock";
 
     // Widget Settings
     public static final String CLOCK_DIGITAL = "clock_digital";
@@ -39,6 +37,7 @@ public class Constants {
     public static final String WEATHER_INVERT_LOWHIGH = "weather_invert_lowhigh";
     public static final String WEATHER_REFRESH_INTERVAL = "weather_refresh_interval";
     public static final String WEATHER_ICON_STYLE = "weather_icon_style";
+    public static final String WEATHER_WOEID = "weather_woeid";
 
     public static final String SHOW_CALENDAR = "show_calendar";
     public static final String CALENDAR_LIST = "calendar_list";
@@ -48,12 +47,16 @@ public class Constants {
     public static final String CALENDAR_SHOW_LOCATION = "calendar_show_location";
     public static final String CALENDAR_SHOW_DESCRIPTION = "calendar_show_description";
 
+    // other shared pref entries
+    public static final String WEATHER_LAST_UPDATE = "last_weather_update";
+    public static final String WEATHER_DATA = "weather_data";
+
+    public static final int MAX_CALENDAR_ITEMS = 3;
+
     // Widget text colors
     public static final String CLOCK_TIME_COLOR = "clock_time_color";
     public static final String CLOCK_DATE_COLOR = "clock_date_color";
     public static final String CLOCK_ALARM_COLOR = "clock_alarm_color";
     public static final String WEATHER_COLOR = "weather_color";
     public static final String CALENDAR_COLOR = "calendar_color";
-
-    public static final int MAX_CALENDAR_ITEMS = 3;
 }
