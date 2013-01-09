@@ -52,6 +52,13 @@
             android:key="calendar_hide_allday"
             android:dependency="show_calendar"
             android:title="@string/calendar_hide_allday_title" />
+
+        <net.margaritov.preference.colorpicker.ColorPickerPreference
+            android:key="calendar_color"
+            android:title="@string/calendar_color_title"
+            android:defaultValue="@color/clock_white"
+            alphaSlider="true" />
+
     </PreferenceCategory>
 
     <PreferenceCategory

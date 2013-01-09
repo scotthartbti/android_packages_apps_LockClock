@@ -19,11 +19,15 @@ package com.cyanogenmod.lockclock.misc;
 
 import android.appwidget.AppWidgetManager;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.os.Bundle;
 import android.util.TypedValue;
+import android.widget.RemoteViews;
 
 import com.cyanogenmod.lockclock.R;
+
+import net.margaritov.preference.colorpicker.ColorPickerPreference;
 
 public class WidgetUtils {
     static final String TAG = "WidgetUtils";
@@ -78,5 +82,34 @@ public class WidgetUtils {
             return (ratio > 1) ? 1f : ratio;
         }
         return 1f;
+    }
+
+    public static void setClockColor(Context context, RemoteViews clockViews, SharedPreferences sp) {
+        int colorTime = sp.getInt(Constants.CLOCK_TIME_COLOR,
+                context.getResources().getColor(R.color.clock_white));
+        int colorDate = sp.getInt(Constants.CLOCK_DATE_COLOR,
+                context.getResources().getColor(R.color.clock_white));
+        int colorAlarm = sp.getInt(Constants.CLOCK_ALARM_COLOR,
+                context.getResources().getColor(R.color.clock_white));
+        int colorWeather = sp.getInt(Constants.WEATHER_COLOR,
+                context.getResources().getColor(R.color.clock_white));
+        int colorCalendar = sp.getInt(Constants.CALENDAR_COLOR,
+                context.getResources().getColor(R.color.clock_white));
+
+        clockViews.setTextColor(R.id.clock1_bold, colorTime);
+        clockViews.setTextColor(R.id.clock1_regular, colorTime);
+        clockViews.setTextColor(R.id.clock2_bold, colorTime);
+        clockViews.setTextColor(R.id.clock2_regular, colorTime);
+        clockViews.setTextColor(R.id.date_bold, colorDate);
+        clockViews.setTextColor(R.id.date_regular, colorDate);
+        clockViews.setTextColor(R.id.nextAlarm_bold, colorAlarm);
+        clockViews.setTextColor(R.id.nextAlarm_regular, colorAlarm);
+        clockViews.setTextColor(R.id.weather_city, colorWeather);
+        clockViews.setTextColor(R.id.weather_condition, colorWeather);
+        clockViews.setTextColor(R.id.update_time, colorWeather);
+        clockViews.setTextColor(R.id.weather_temp, colorWeather);
+        clockViews.setTextColor(R.id.weather_low_high, colorWeather);
+        clockViews.setTextColor(R.id.calendar_event_title, colorCalendar);
+        clockViews.setTextColor(R.id.calendar_event_details, colorCalendar);
     }
 }

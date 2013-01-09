@@ -145,6 +145,8 @@ public class ClockWidgetService extends Service {
         refreshAlarmStatus(remoteViews);
         boolean hasCalEvents = refreshCalendar(remoteViews);
 
+        WidgetUtils.setClockColor(mContext, remoteViews, mSharedPrefs);
+
         // Hide the Loading indicator
         remoteViews.setViewVisibility(R.id.loading_indicator, View.GONE);
 
@@ -515,6 +517,7 @@ public class ClockWidgetService extends Service {
                 if (nextCalendar[i][0] != null) {
                     final RemoteViews itemViews = new RemoteViews(mContext.getPackageName(),
                             R.layout.calendar_item);
+                    WidgetUtils.setClockColor(mContext, itemViews, mSharedPrefs);
 
                     // Only set the icon on the first event
                     if (!hasEvents) {

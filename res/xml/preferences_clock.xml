@@ -53,4 +53,27 @@
             android:title="@string/clock_font_date_title"
             android:defaultValue="true" />
     </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="@string/text_colors">
+
+        <net.margaritov.preference.colorpicker.ColorPickerPreference
+            android:key="clock_time_color"
+            android:title="@string/time_color_title"
+            android:defaultValue="@color/clock_white"
+            alphaSlider="true" />
+
+        <net.margaritov.preference.colorpicker.ColorPickerPreference
+            android:key="clock_date_color"
+            android:title="@string/date_color_title"
+            android:defaultValue="@color/clock_white"
+            alphaSlider="true" />
+
+        <net.margaritov.preference.colorpicker.ColorPickerPreference
+            android:key="clock_alarm_color"
+            android:title="@string/alarm_color_title"
+            android:defaultValue="@color/clock_white"
+            alphaSlider="true" />
+
+        </PreferenceCategory>
 </PreferenceScreen>

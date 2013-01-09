@@ -114,6 +114,7 @@
     <!-- Preferences - Categories -->
     <string name="general_category">General</string>
     <string name="display_category">Display</string>
+    <string name="text_colors">Text Color</string>
 
     <!-- Preferences - Clock -->
     <string name="use_digital_clock_title">Use Digital clock</string>
@@ -122,6 +123,9 @@
     <string name="clock_font_minutes_title">Bold minutes</string>
     <string name="clock_font_date_title">Bold date and alarm</string>
     <string name="show_alarm_title">Show next alarm</string>
+    <string name="time_color_title">Time color</string>
+    <string name="date_color_title">Date color</string>
+    <string name="alarm_color_title">Alarm color</string>
 
     <!-- Preferences - Weather -->
     <string name="weather_enabled">Enabled</string>
@@ -147,6 +151,7 @@
     <string name="weather_icon_style_whitehighres">White high res</string>
     <string name="weather_icon_style_cm">CM chronus</string>
     <string name="weather_icon_style_color">Tick by ludiDROID</string>
+    <string name="weather_color_title">Weather color</string>
 
     <!-- Preferences - Calendar -->
     <string name="calendar_title">Display next event</string>
@@ -158,6 +163,7 @@
     <string name="calendar_lookahead_title">Event lookahead</string>
     <string name="calendar_show_location_title">Event location</string>
     <string name="calendar_show_description_title">Event description</string>
+    <string name="calendar_color_title">Calendar color</string>
 
     <!-- Calendar - lookahead -->
     <string name="calendar_lookahead_3hrs">3 hours</string>
@@ -171,5 +177,15 @@
     <string name="calendar_metadata_none">Do not show</string>
     <string name="calendar_metadata_first_line">Show first line</string>
     <string name="calendar_metadata_all">Show all</string>
+
+    <!-- Color Picker -->
+    <string name="dialog_color_picker">Color Picker</string>
+    <string name="press_color_to_apply">Press on Color to apply</string>
+    <string name="arrow_right">→</string>
+    <string name="arrow_down">↓</string>
+    <string name="hex">Hex:</string>
+    <string name="hex_hint">#FF000000</string>
+    <string name="set">Set</string>
+    <string name="ics_color">Holo</string>
 
 </resources>

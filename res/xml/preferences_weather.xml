@@ -35,13 +35,6 @@
             android:entryValues="@array/weather_interval_values"
             android:title="@string/weather_refresh_interval" />
 
-        <ListPreference
-            android:key="weather_icon_style"
-            android:defaultValue="0"
-            android:entries="@array/weather_icon_style_entries"
-            android:entryValues="@array/weather_icon_style_values"
-            android:title="@string/weather_icon_style_title" />
-
         <CheckBoxPreference
             android:key="weather_use_custom_location"
             android:dependency="show_weather"
@@ -53,6 +46,19 @@
             android:dialogTitle="@string/weather_custom_location_dialog_title"
             android:hint="@string/weather_custom_location_hint"
             android:title="@string/weather_custom_location_title" />
+
+        <ListPreference
+            android:key="weather_icon_style"
+            android:defaultValue="0"
+            android:entries="@array/weather_icon_style_entries"
+            android:entryValues="@array/weather_icon_style_values"
+            android:title="@string/weather_icon_style_title" />
+
+        <net.margaritov.preference.colorpicker.ColorPickerPreference
+            android:key="weather_color"
+            android:title="@string/weather_color_title"
+            android:defaultValue="@color/clock_white"
+            alphaSlider="true" />
     </PreferenceCategory>
 
     <PreferenceCategory

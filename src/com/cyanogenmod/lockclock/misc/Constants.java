@@ -48,5 +48,12 @@ public class Constants {
     public static final String CALENDAR_SHOW_LOCATION = "calendar_show_location";
     public static final String CALENDAR_SHOW_DESCRIPTION = "calendar_show_description";
 
+    // Widget text colors
+    public static final String CLOCK_TIME_COLOR = "clock_time_color";
+    public static final String CLOCK_DATE_COLOR = "clock_date_color";
+    public static final String CLOCK_ALARM_COLOR = "clock_alarm_color";
+    public static final String WEATHER_COLOR = "weather_color";
+    public static final String CALENDAR_COLOR = "calendar_color";
+
     public static final int MAX_CALENDAR_ITEMS = 3;
 }
