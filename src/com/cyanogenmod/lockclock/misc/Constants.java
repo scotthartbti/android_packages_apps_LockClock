@@ -38,6 +38,7 @@ public class Constants {
     public static final String WEATHER_REFRESH_INTERVAL = "weather_refresh_interval";
     public static final String WEATHER_ICON_STYLE = "weather_icon_style";
     public static final String WEATHER_WOEID = "weather_woeid";
+    public static final String WEATHER_SHOW_WHEN_MINIMIZED = "weather_show_when_minimized";
 
     public static final String SHOW_CALENDAR = "show_calendar";
     public static final String CALENDAR_LIST = "calendar_list";

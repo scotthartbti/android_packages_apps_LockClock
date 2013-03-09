@@ -17,7 +17,7 @@
 <resources>
 
     <!-- General strings -->
-    <string name="app_name">Lock Clock</string>
+    <string name="app_name" translatable="false">Lock Clock</string>
     <string name="unknown">Unknown</string>
     <string name="cancel">Cancel</string>
     <string name="loading_indicator">Loading widget\u2026</string>
@@ -146,6 +146,8 @@
     <string name="weather_retrieve_location_dialog_enable_button">Enable</string>
     <string name="weather_invert_lowhigh">Invert low/high temperatures</string>
     <string name="weather_progress_title">Verifying location</string>
+    <string name="weather_show_when_minimized_title">Show when minimized</string>
+    <string name="weather_show_when_minimized_summary">Display summary weather information when the widget is minimized</string>
     <string name="weather_icon_style_title">Weather icon style</string>
     <string name="weather_icon_style_normal">Normal</string>
     <string name="weather_icon_style_fancy">Fancy</string>
