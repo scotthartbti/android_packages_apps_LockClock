@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Copyright (C) 2012 The CyanogenMod Project (DvTonder)
+<!--
+     Copyright (C) 2012-2013 The CyanogenMod Project (DvTonder)
 
      Licensed under the Apache License, Version 2.0 (the "License");
      you may not use this file except in compliance with the License.
@@ -97,6 +98,7 @@
     <string name="clock_font_minutes_title">Minuten vetgedrukt</string>
     <string name="clock_font_date_title">Alarm/datum vetgedrukt</string>
     <string name="show_alarm_title">Volgend alarm tonen</string>
+    <string name="clock_am_pm_title">AM/PM weergeven</string>
     <string name="weather_enabled">Ingeschakeld</string>
     <string name="weather_enable">Weer tonen</string>
     <string name="weather_source">Yahoo! Weer</string>
@@ -118,6 +120,7 @@
     <string name="weather_alternate_icons_summary">Door deze optie te kiezen, schakelt u tussen de standaard- (gekleurde) en alternatieve (witte) pictogrammen</string>
     <string name="weather_show_when_minimized_title">Tonen indien geminimaliseerd</string>
     <string name="weather_show_when_minimized_summary">Weersinformatie tonen indien widget is geminimaliseerd</string>
+    <string name="weather_select_location">Locatie selecteren</string>
     <string name="calendar_upcoming_events_category">Aankomende afspraken</string>
     <string name="calendar_title">Volgende afspraak tonen</string>
     <string name="calendars_title">Afspraakagenda\'s</string>

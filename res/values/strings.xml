@@ -27,7 +27,12 @@
     <string name="widget_12_hours_format_h" translatable="false">h</string>
     <string name="widget_12_hours_format_no_ampm_m" translatable="false">:mm</string>
     <string name="widget_12_hours_format_m" translatable="false">:mm<font size="15">aa</font></string>
-    <string name="widget_24_hours_format_h" translatable="false">H</string>
+
+    <!-- java.text.SimpleDateFormat uses H for hours in the 0-23 range and
+         android.text.format.DateFormat uses k for hours in the 0-23 range.
+         We need to support both -->
+    <string name="widget_24_hours_format_h" translatable="false">kk</string>
+    <string name="widget_24_hours_format_h_api_16" translatable="false">HH</string>
     <string name="widget_24_hours_format_m" translatable="false">:mm</string>
 
     <!-- Weather - Weather codes -->
@@ -147,6 +152,7 @@
     <string name="weather_alternate_icons_summary">Select to toggle between the default (Color) and the alternate (White) icons</string>
     <string name="weather_show_when_minimized_title">Show when minimized</string>
     <string name="weather_show_when_minimized_summary">Display summary weather information when the widget is minimized</string>
+    <string name="weather_select_location">Select location</string>
 
     <!-- Preferences - Calendar -->
     <string name="calendar_title">Display next event</string>

@@ -40,8 +40,7 @@ import android.widget.RemoteViewsService.RemoteViewsFactory;
 import com.cyanogenmod.lockclock.ClockWidgetProvider;
 import com.cyanogenmod.lockclock.ClockWidgetService;
 import com.cyanogenmod.lockclock.R;
-import com.cyanogenmod.lockclock.misc.CalendarInfo;
-import com.cyanogenmod.lockclock.misc.CalendarInfo.EventInfo;
+import com.cyanogenmod.lockclock.calendar.CalendarInfo.EventInfo;
 import com.cyanogenmod.lockclock.misc.Constants;
 import com.cyanogenmod.lockclock.misc.Preferences;
 
@@ -89,6 +88,9 @@ class CalendarRemoteViewsFactory implements RemoteViewsFactory {
     }
 
     private SpannableString getSpannableString(String text, boolean bold) {
+        if (text == null) {
+            return null;
+        }
         SpannableString spanText = new SpannableString(text);
         if (bold) {
             spanText.setSpan(new StyleSpan(Typeface.BOLD), 0, text.length(), 0);
@@ -120,7 +122,7 @@ class CalendarRemoteViewsFactory implements RemoteViewsFactory {
 
     @Override
     public RemoteViews getViewAt(int position) {
-        if (0 > position || mCalendarInfo.getEvents().size() < position) {
+        if (position < 0 || position >= mCalendarInfo.getEvents().size()) {
             return null;
         }
 

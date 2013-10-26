@@ -115,6 +115,7 @@
     <string name="clock_font_minutes_title">Percek félkövérrel</string>
     <string name="clock_font_date_title">Dátum és ébresztés félkövérrel</string>
     <string name="show_alarm_title">Következő ébresztés megjelenítése</string>
+    <string name="clock_am_pm_title">Napszak (De/Du) megjelenítése</string>
 
     <!-- Preferences - Weather -->
     <string name="weather_enabled">Engedélyezve</string>
@@ -138,6 +139,7 @@
     <string name="weather_alternate_icons_summary">Válasszon az alapértelmezett (színes), illetve az alternatív (fehér) ikonok közül</string>
     <string name="weather_show_when_minimized_title">Megjelenítés kis méret esetén</string>
     <string name="weather_show_when_minimized_summary">Időjárási adatok megjelenítése kis modulméret esetén</string>
+    <string name="weather_select_location">Válassza ki a helyet</string>
 
     <!-- Preferences - Calendar -->
     <string name="calendar_title">Megjeleníti a következő naptárbejegyzést</string>
