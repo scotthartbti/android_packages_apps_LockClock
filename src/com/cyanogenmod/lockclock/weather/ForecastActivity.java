@@ -18,10 +18,13 @@ package com.cyanogenmod.lockclock.weather;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.KeyguardManager;
+import android.app.WallpaperManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -32,10 +35,11 @@ import android.view.animation.Animation;
 import android.view.animation.LinearInterpolator;
 import android.view.animation.RotateAnimation;
 import android.widget.ImageView;
-import com.cyanogenmod.lockclock.R;
+
+import com.cyanogenmod.lockclock.misc.Constants;
 import com.cyanogenmod.lockclock.misc.Preferences;
 import com.cyanogenmod.lockclock.misc.WidgetUtils;
-import cyanogenmod.weather.WeatherInfo;
+import com.cyanogenmod.lockclock.R;
 
 public class ForecastActivity extends Activity implements OnClickListener {
     private static final String TAG = "ForecastActivity";

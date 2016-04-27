@@ -26,31 +26,24 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.location.LocationProvider;
+import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.HandlerThread;
 import android.os.IBinder;
-import android.os.Looper;
-import android.os.Message;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
 import android.os.SystemClock;
 import android.text.TextUtils;
 import android.util.Log;
-import android.widget.Toast;
+
 import com.cyanogenmod.lockclock.ClockWidgetProvider;
-import com.cyanogenmod.lockclock.R;
 import com.cyanogenmod.lockclock.misc.Constants;
 import com.cyanogenmod.lockclock.misc.Preferences;
 import com.cyanogenmod.lockclock.misc.WidgetUtils;
 import com.cyanogenmod.lockclock.preference.WeatherPreferences;
+
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
-import cyanogenmod.weather.CMWeatherManager;
-import cyanogenmod.weather.WeatherInfo;
-import cyanogenmod.weather.WeatherLocation;
 
-import java.lang.ref.WeakReference;
 import java.util.Date;
 
 public class WeatherUpdateService extends Service {
@@ -61,10 +54,6 @@ public class WeatherUpdateService extends Service {
     private static final String ACTION_CANCEL_LOCATION_UPDATE =
             "com.cyanogenmod.lockclock.action.CANCEL_LOCATION_UPDATE";
 
-    private static final String ACTION_CANCEL_UPDATE_WEATHER_REQUEST =
-            "com.cyanogenmod.lockclock.action.CANCEL_UPDATE_WEATHER_REQUEST";
-    private static final long WEATHER_UPDATE_REQUEST_TIMEOUT_MS = 30L * 1000L;
-
     // Broadcast action for end of update
     public static final String ACTION_UPDATE_FINISHED = "com.cyanogenmod.lockclock.action.WEATHER_UPDATE_FINISHED";
     public static final String EXTRA_UPDATE_CANCELLED = "update_cancelled";
@@ -73,8 +62,7 @@ public class WeatherUpdateService extends Service {
     private static final long OUTDATED_LOCATION_THRESHOLD_MILLIS = 10L * 60L * 1000L; // 10 minutes
     private static final float LOCATION_ACCURACY_THRESHOLD_METERS = 50000;
 
-    private WorkerThread mWorkerThread;
-    private Handler mHandler;
+    private WeatherUpdateTask mTask;
 
     private static final Criteria sLocationCriteria;
     static {
@@ -85,243 +73,107 @@ public class WeatherUpdateService extends Service {
     }
 
     @Override
-    public void onCreate() {
-        Log.d(TAG, "onCreate");
-        mWorkerThread = new WorkerThread(getApplicationContext());
-        mWorkerThread.start();
-        mWorkerThread.prepareHandler();
-        mHandler = new Handler(Looper.getMainLooper());
-    }
-
-    @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (D) Log.v(TAG, "Got intent " + intent);
 
+        boolean active = mTask != null && mTask.getStatus() != AsyncTask.Status.FINISHED;
+
         if (ACTION_CANCEL_LOCATION_UPDATE.equals(intent.getAction())) {
             WeatherLocationListener.cancel(this);
-            if (!mWorkerThread.isProcessing()) {
+            if (!active) {
                 stopSelf();
             }
             return START_NOT_STICKY;
         }
 
-        if (ACTION_CANCEL_UPDATE_WEATHER_REQUEST.equals(intent.getAction())) {
-            if (mWorkerThread.isProcessing()) {
-                mWorkerThread.getHandler().obtainMessage(
-                        WorkerThread.MSG_CANCEL_UPDATE_WEATHER_REQUEST).sendToTarget();
-                mHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        final Context context = getApplicationContext();
-                        final CMWeatherManager weatherManager
-                                = CMWeatherManager.getInstance(context);
-                        final String activeProviderLabel
-                                = weatherManager.getActiveWeatherServiceProviderLabel();
-                        final String noData
-                                = getString(R.string.weather_cannot_reach_provider,
-                                    activeProviderLabel);
-                        Toast.makeText(context, noData, Toast.LENGTH_SHORT).show();
-                    }
-                });
-            }
-            stopSelf();
-            return START_NOT_STICKY;
+        if (active) {
+            if (D) Log.v(TAG, "Weather update is still active, not starting new update");
+            return START_REDELIVER_INTENT;
         }
 
         boolean force = ACTION_FORCE_UPDATE.equals(intent.getAction());
         if (!shouldUpdate(force)) {
             Log.d(TAG, "Service started, but shouldn't update ... stopping");
-            sendCancelledBroadcast();
             stopSelf();
+            sendCancelledBroadcast();
             return START_NOT_STICKY;
         }
 
-        mWorkerThread.getHandler().obtainMessage(WorkerThread.MSG_ON_NEW_WEATHER_REQUEST)
-                .sendToTarget();
+        mTask = new WeatherUpdateTask();
+        mTask.execute();
 
         return START_REDELIVER_INTENT;
     }
 
-    private boolean shouldUpdate(boolean force) {
-        final CMWeatherManager weatherManager
-                = CMWeatherManager.getInstance(getApplicationContext());
-        if (weatherManager.getActiveWeatherServiceProviderLabel() == null) {
-            //Why bother if we don't even have an active provider
-            if (D) Log.d(TAG, "No active weather service provider found, skip");
-            return false;
-        }
+    private void sendCancelledBroadcast() {
+        Intent finishedIntent = new Intent(ACTION_UPDATE_FINISHED);
+        finishedIntent.putExtra(EXTRA_UPDATE_CANCELLED, true);
+        sendBroadcast(finishedIntent);
+    }
+    
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
 
-        final long interval = Preferences.weatherRefreshIntervalInMs(this);
+    @Override
+    public void onDestroy() {
+        if (mTask != null && mTask.getStatus() != AsyncTask.Status.FINISHED) {
+            mTask.cancel(true);
+            mTask = null;
+        }
+    }
+
+    private boolean shouldUpdate(boolean force) {
+        long interval = Preferences.weatherRefreshIntervalInMs(this);
         if (interval == 0 && !force) {
-            if (D) Log.v(TAG, "Interval set to manual and update not forced, skip");
+            if (D) Log.v(TAG, "Interval set to manual and update not forced, skip update");
             return false;
         }
 
         if (!WeatherPreferences.hasLocationPermission(this)) {
-            if (D) Log.v(TAG, "Application does not have the location permission, skip");
+            if (D) Log.v(TAG, "Application does not have the location permission");
             return false;
         }
 
-        if (WidgetUtils.isNetworkAvailable(this)) {
-            if (force) {
-                if (D) Log.d(TAG, "Forcing weather update");
-                return true;
-            } else {
-                final long now = SystemClock.elapsedRealtime();
-                final long lastUpdate = Preferences.lastWeatherUpdateTimestamp(this);
-                final long due = lastUpdate + interval;
-                if (D) {
-                    Log.d(TAG, "Now " + now + " Last update " + lastUpdate
-                            + " interval " + interval);
-                }
+        if (force) {
+            Preferences.setCachedWeatherInfo(this, 0, null);
+        }
+        
+        long now = System.currentTimeMillis();
+        long lastUpdate = Preferences.lastWeatherUpdateTimestamp(this);
+        long due = lastUpdate + interval;
 
-                if (lastUpdate == 0 || due - now < 0) {
-                    if (D) Log.d(TAG, "Should update");
-                    return true;
-                } else {
-                    if (D) Log.v(TAG, "Next weather update due in " + (due - now) + " ms, skip");
-                    return false;
-                }
-            }
-        } else {
-            if (D) Log.d(TAG, "Network is not available, skip");
+        if (D) Log.d(TAG, "Now " + now + " due " + due + "(" + new Date(due) + ")");
+
+        if (lastUpdate != 0 && now < due) {
+            if (D) Log.v(TAG, "Weather update is not due yet");
             return false;
         }
+
+        return WidgetUtils.isNetworkAvailable(this);
     }
 
-    private static class WorkerThread extends HandlerThread
-            implements CMWeatherManager.WeatherUpdateRequestListener {
-
-        public static final int MSG_ON_NEW_WEATHER_REQUEST = 1;
-        public static final int MSG_ON_WEATHER_REQUEST_COMPLETED = 2;
-        public static final int MSG_WEATHER_REQUEST_FAILED = 3;
-        public static final int MSG_CANCEL_UPDATE_WEATHER_REQUEST = 4;
-
-        private Handler mHandler;
-        private boolean mIsProcessingWeatherUpdate = false;
+    private class WeatherUpdateTask extends AsyncTask<Void, Void, WeatherInfo> {
         private WakeLock mWakeLock;
-        private PendingIntent mTimeoutPendingIntent;
-        private int mRequestId;
-        private final CMWeatherManager mWeatherManager;
-        final private Context mContext;
+        private Context mContext;
 
-        public WorkerThread(Context context) {
-            super("weather-service-worker");
-            mContext = context;
-            mWeatherManager = CMWeatherManager.getInstance(mContext);
-        }
-
-        public synchronized void prepareHandler() {
-            mHandler = new Handler(getLooper()) {
-                @Override
-                public void handleMessage(Message msg) {
-                    if (D) Log.d(TAG, "Msg " + msg.what);
-                    switch (msg.what) {
-                        case MSG_ON_NEW_WEATHER_REQUEST:
-                            onNewWeatherRequest();
-                            break;
-                        case MSG_ON_WEATHER_REQUEST_COMPLETED:
-                            WeatherInfo info = (WeatherInfo) msg.obj;
-                            onWeatherRequestCompleted(info);
-                            break;
-                        case MSG_WEATHER_REQUEST_FAILED:
-                            int status = msg.arg1;
-                            onWeatherRequestFailed(status);
-                            break;
-                        case MSG_CANCEL_UPDATE_WEATHER_REQUEST:
-                            onCancelUpdateWeatherRequest();
-                            break;
-                        default:
-                            //Unknown message, pass it on...
-                            super.handleMessage(msg);
-                    }
-                }
-            };
-        }
-
-        private void startTimeoutAlarm() {
-            Intent intent = new Intent(mContext, WeatherUpdateService.class);
-            intent.setAction(ACTION_CANCEL_UPDATE_WEATHER_REQUEST);
-
-            mTimeoutPendingIntent = PendingIntent.getService(mContext, 0, intent,
-                    PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_CANCEL_CURRENT);
-
-            AlarmManager am = (AlarmManager) mContext.getSystemService(ALARM_SERVICE);
-            long elapseTime = SystemClock.elapsedRealtime() + WEATHER_UPDATE_REQUEST_TIMEOUT_MS;
-            am.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, elapseTime, mTimeoutPendingIntent);
-            if (D) Log.v(TAG, "Timeout alarm set to expire in " + elapseTime + " ms");
-        }
-
-        private void cancelTimeoutAlarm() {
-            if (mTimeoutPendingIntent != null) {
-                AlarmManager am = (AlarmManager) mContext.getSystemService(ALARM_SERVICE);
-                am.cancel(mTimeoutPendingIntent);
-                mTimeoutPendingIntent = null;
-                if (D) Log.v(TAG, "Timeout alarm cancelled");
-            }
-        }
-
-        public synchronized Handler getHandler() {
-            return mHandler;
-        }
-
-        private void onNewWeatherRequest() {
-            if (mIsProcessingWeatherUpdate) {
-                Log.d(TAG, "Already processing weather update, discarding request...");
-                return;
-            }
-
-            mIsProcessingWeatherUpdate = true;
-            final PowerManager pm
-                    = (PowerManager) mContext.getSystemService(POWER_SERVICE);
+        public WeatherUpdateTask() {
+            if (D) Log.d(TAG, "Starting weather update task");
+            PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
             mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
             mWakeLock.setReferenceCounted(false);
-            if (D) Log.v(TAG, "ACQUIRING WAKELOCK");
+            mContext = WeatherUpdateService.this;
+        }
+
+        @Override
+        protected void onPreExecute() {
+            if (D) Log.d(TAG, "ACQUIRING WAKELOCK");
             mWakeLock.acquire();
-
-            WeatherLocation customWeatherLocation = null;
-            if (Preferences.useCustomWeatherLocation(mContext)) {
-                customWeatherLocation = Preferences.getCustomWeatherLocation(mContext);
-            }
-            if (customWeatherLocation != null) {
-                mRequestId = mWeatherManager.requestWeatherUpdate(customWeatherLocation, this);
-                if (D) Log.d(TAG, "Request submitted using WeatherLocation");
-                startTimeoutAlarm();
-            } else {
-                final Location location = getCurrentLocation();
-                if (location != null) {
-                    mRequestId = mWeatherManager.requestWeatherUpdate(location, this);
-                    if (D) Log.d(TAG, "Request submitted using Location");
-                    startTimeoutAlarm();
-                } else {
-                    // work with cached location from last request for now
-                    // a listener to update it is already scheduled if possible
-                    WeatherInfo cachedInfo = Preferences.getCachedWeatherInfo(mContext);
-                    if (cachedInfo != null) {
-                        mHandler.obtainMessage(MSG_ON_WEATHER_REQUEST_COMPLETED,
-                                cachedInfo).sendToTarget();
-                        if (D) Log.d(TAG, "Returning cached weather data [ "
-                                + cachedInfo.toString()+ " ]");
-                    } else {
-                        mHandler.obtainMessage(MSG_WEATHER_REQUEST_FAILED).sendToTarget();
-                    }
-                }
-            }
-        }
-
-        public void tearDown() {
-            if (D) Log.d(TAG, "Tearing down worker thread");
-            if (isProcessing()) mWeatherManager.cancelRequest(mRequestId);
-            quit();
-        }
-
-        public boolean isProcessing() {
-            return mIsProcessingWeatherUpdate;
         }
 
         private Location getCurrentLocation() {
-            final LocationManager lm
-                    = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
+            LocationManager lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
             Location location = lm.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER);
             if (D) Log.v(TAG, "Current location is " + location);
 
@@ -352,6 +204,7 @@ public class WeatherUpdateService extends Service {
                     WeatherLocationListener.registerIfNeeded(mContext, locationProvider);
                 }
             }
+
             return location;
         }
 
@@ -361,81 +214,77 @@ public class WeatherUpdateService extends Service {
                     || result == ConnectionResult.SERVICE_VERSION_UPDATE_REQUIRED;
         }
 
-        private void onWeatherRequestCompleted(WeatherInfo result) {
-            if (D) Log.d(TAG, "Weather update received, caching data and updating widget");
-            cancelTimeoutAlarm();
-            long now = SystemClock.elapsedRealtime();
-            Preferences.setCachedWeatherInfo(mContext, now, result);
-            scheduleUpdate(mContext, Preferences.weatherRefreshIntervalInMs(mContext), false);
+        @Override
+        protected WeatherInfo doInBackground(Void... params) {
+            WeatherProvider provider = Preferences.weatherProvider(mContext);
+            boolean metric = Preferences.useMetricUnits(mContext);
+            String customLocationId = null, customLocationName = null;
 
-            Intent updateIntent = new Intent(mContext, ClockWidgetProvider.class);
-            mContext.sendBroadcast(updateIntent);
-            broadcastAndCleanUp(false);
-        }
-
-        private void onWeatherRequestFailed(int status) {
-            if (D) Log.d(TAG, "Weather refresh failed ["+status+"]");
-            cancelTimeoutAlarm();
-            if (status == CMWeatherManager.RequestStatus.ALREADY_IN_PROGRESS) {
-                if (D) Log.d(TAG, "A request is already in progress, no need to schedule again");
-            } else if (status == CMWeatherManager.RequestStatus.FAILED) {
-                //Something went wrong, let's schedule an update at the next interval from now
-                //A force update might happen earlier anyway
-                scheduleUpdate(mContext, Preferences.weatherRefreshIntervalInMs(mContext), false);
-            } else {
-                //Wait until the next update is due
-                scheduleNextUpdate(mContext, false);
+            if (Preferences.useCustomWeatherLocation(mContext)) {
+                customLocationId = Preferences.customWeatherLocationId(mContext);
+                customLocationName = Preferences.customWeatherLocationCity(mContext);
             }
-            broadcastAndCleanUp(true);
-        }
 
-        private void onCancelUpdateWeatherRequest() {
-            if (D) Log.d(TAG, "Cancelling active weather request");
-            if (mIsProcessingWeatherUpdate) {
-                cancelTimeoutAlarm();
-                mWeatherManager.cancelRequest(mRequestId);
-                broadcastAndCleanUp(true);
+            if (customLocationId != null) {
+                return provider.getWeatherInfo(customLocationId, customLocationName, metric);
             }
-        }
 
-        private void broadcastAndCleanUp(boolean updateCancelled) {
-            Intent finishedIntent = new Intent(ACTION_UPDATE_FINISHED);
-            finishedIntent.putExtra(EXTRA_UPDATE_CANCELLED, updateCancelled);
-            mContext.sendBroadcast(finishedIntent);
+            Location location = getCurrentLocation();
+            if (location != null) {
+                WeatherInfo info = provider.getWeatherInfo(location, metric);
+                if (info != null) {
+                    return info;
+                }
+            }
 
-            if (D) Log.d(TAG, "RELEASING WAKELOCK");
-            mWakeLock.release();
-            mIsProcessingWeatherUpdate = false;
-            mContext.stopService(new Intent(mContext, WeatherUpdateService.class));
+            // work with cached location from last request for now
+            // a listener to update it is already scheduled if possible
+            WeatherInfo cachedInfo = Preferences.getCachedWeatherInfo(mContext);
+            if (cachedInfo != null) {
+                return provider.getWeatherInfo(cachedInfo.getId(), cachedInfo.getCity(), metric);
+            }
+
+            return null;
         }
 
         @Override
-        public void onWeatherRequestCompleted(int state, WeatherInfo weatherInfo) {
-            if (state == CMWeatherManager.RequestStatus.COMPLETED) {
-                mHandler.obtainMessage(WorkerThread.MSG_ON_WEATHER_REQUEST_COMPLETED, weatherInfo)
-                        .sendToTarget();
-            } else {
-                mHandler.obtainMessage(WorkerThread.MSG_WEATHER_REQUEST_FAILED, state, 0)
-                        .sendToTarget();
-            }
+        protected void onPostExecute(WeatherInfo result) {
+            finish(result);
         }
-    }
 
-    private void sendCancelledBroadcast() {
-        Intent finishedIntent = new Intent(ACTION_UPDATE_FINISHED);
-        finishedIntent.putExtra(EXTRA_UPDATE_CANCELLED, true);
-        sendBroadcast(finishedIntent);
-    }
+        @Override
+        protected void onCancelled() {
+            finish(null);
+        }
 
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;
-    }
+        private void finish(WeatherInfo result) {
+            if (result != null) {
+                if (D) Log.d(TAG, "Weather update received, caching data and updating widget");
+                long now = System.currentTimeMillis();
+                Preferences.setCachedWeatherInfo(mContext, now, result);
+                scheduleUpdate(mContext, Preferences.weatherRefreshIntervalInMs(mContext), false);
 
-    @Override
-    public void onDestroy() {
-        Log.d(TAG, "onDestroy");
-        mWorkerThread.tearDown();
+                Intent updateIntent = new Intent(mContext, ClockWidgetProvider.class);
+                sendBroadcast(updateIntent);
+            } else if (isCancelled()) {
+                // cancelled, likely due to lost network - we'll get restarted
+                // when network comes back
+            } else {
+                // failure, schedule next download in 30 minutes
+                if (D) Log.d(TAG, "Weather refresh failed, scheduling update in 30 minutes");
+                long interval = 30 * 60 * 1000;
+                scheduleUpdate(mContext, interval, false);
+            }
+            WeatherContentProvider.updateCachedWeatherInfo(mContext, result);
+
+            Intent finishedIntent = new Intent(ACTION_UPDATE_FINISHED);
+            finishedIntent.putExtra(EXTRA_UPDATE_CANCELLED, result == null);
+            sendBroadcast(finishedIntent);
+
+            if (D) Log.d(TAG, "RELEASING WAKELOCK");
+            mWakeLock.release();
+            stopSelf();
+        }
     }
 
     private static class WeatherLocationListener implements LocationListener {
@@ -513,7 +362,7 @@ public class WeatherUpdateService extends Service {
             // Now, we have a location to use. Schedule a weather update right now.
             if (D) Log.d(TAG, "The location has changed, schedule an update ");
             synchronized (WeatherLocationListener.class) {
-                scheduleUpdate(mContext, 0, true);
+                WeatherUpdateService.scheduleUpdate(mContext, 0, true);
                 cancelTimeoutAlarm();
                 sInstance = null;
             }
@@ -525,7 +374,7 @@ public class WeatherUpdateService extends Service {
             if (D) Log.d(TAG, "The location service has become available, schedule an update ");
             if (status == LocationProvider.AVAILABLE) {
                 synchronized (WeatherLocationListener.class) {
-                    scheduleUpdate(mContext, 0, true);
+                    WeatherUpdateService.scheduleUpdate(mContext, 0, true);
                     cancelTimeoutAlarm();
                     sInstance = null;
                 }
@@ -543,26 +392,21 @@ public class WeatherUpdateService extends Service {
         }
     }
 
-    private static void scheduleUpdate(Context context, long millisFromNow, boolean force) {
+    private static void scheduleUpdate(Context context, long timeFromNow, boolean force) {
         AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        long due = SystemClock.elapsedRealtime() + millisFromNow;
-        if (D) Log.d(TAG, "Next update scheduled at "
-                + new Date(System.currentTimeMillis() + millisFromNow));
-        am.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, due, getUpdateIntent(context, force));
+        long due = System.currentTimeMillis() + timeFromNow;
+
+        if (D) Log.d(TAG, "Scheduling next update at " + new Date(due));
+        am.set(AlarmManager.RTC_WAKEUP, due, getUpdateIntent(context, force));
     }
 
     public static void scheduleNextUpdate(Context context, boolean force) {
-        if (force) {
-            if (D) Log.d(TAG, "Scheduling next update immediately");
+        long lastUpdate = Preferences.lastWeatherUpdateTimestamp(context);
+        if (lastUpdate == 0 || force) {
             scheduleUpdate(context, 0, true);
         } else {
-            final long lastUpdate = Preferences.lastWeatherUpdateTimestamp(context);
-            final long interval = Preferences.weatherRefreshIntervalInMs(context);
-            final long now = SystemClock.elapsedRealtime();
-            long due = (interval + lastUpdate) - now;
-            if (due < 0) due = 0;
-            if (D) Log.d(TAG, "Scheduling in " + due + " ms");
-            scheduleUpdate(context, due, false);
+            long interval = Preferences.weatherRefreshIntervalInMs(context);
+            scheduleUpdate(context, lastUpdate + interval - System.currentTimeMillis(), false);
         }
     }
 

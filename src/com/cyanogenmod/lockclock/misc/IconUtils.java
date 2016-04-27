@@ -30,7 +30,6 @@ import android.graphics.drawable.Drawable;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import com.cyanogenmod.lockclock.R;
-import com.cyanogenmod.lockclock.weather.Utils;
 
 public class IconUtils {
     private static final String TAG = "IconUtils";
@@ -42,9 +41,8 @@ public class IconUtils {
         }
 
         final Resources res = context.getResources();
-        final int resId = res.getIdentifier("weather_" + iconSet + "_"
-                + Utils.addOffsetToConditionCodeFromWeatherContract(conditionCode), "drawable",
-                        context.getPackageName());
+        final int resId = res.getIdentifier("weather_" + iconSet + "_" + conditionCode,
+                "drawable", context.getPackageName());
 
         if (resId != 0) {
             return resId;
@@ -64,13 +62,12 @@ public class IconUtils {
         boolean isMonoSet = Constants.MONOCHROME.equals(iconSet);
         Resources res = null;
         int resId = 0;
-        int fixedConditionCode = Utils.addOffsetToConditionCodeFromWeatherContract(conditionCode);
 
         if (iconSet.startsWith("ext:")) {
             String packageName = iconSet.substring(4);
             try {
                 res = context.getPackageManager().getResourcesForApplication(packageName);
-                resId = res.getIdentifier("weather_" + fixedConditionCode, "drawable", packageName);
+                resId = res.getIdentifier("weather_" + conditionCode, "drawable", packageName);
             } catch (PackageManager.NameNotFoundException e) {
                 // fall back to colored icons
                 iconSet = Constants.COLOR_STD;
@@ -78,8 +75,7 @@ public class IconUtils {
         }
         if (resId == 0) {
             String identifier = isMonoSet
-                    ? "weather_" + fixedConditionCode : "weather_"
-                        + iconSet + "_" + fixedConditionCode;
+                    ? "weather_" + conditionCode : "weather_" + iconSet + "_" + conditionCode;
             res = context.getResources();
             resId = res.getIdentifier(identifier, "drawable", context.getPackageName());
         }

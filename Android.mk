@@ -33,6 +33,6 @@ LOCAL_AAPT_FLAGS := --auto-add-overlay
 LOCAL_AAPT_FLAGS += --extra-packages com.google.android.gms
 
 LOCAL_STATIC_JAVA_LIBRARIES := play \
-                               org.cyanogenmod.platform.sdk
+                               org.apache.http.legacy
 
 include $(BUILD_PACKAGE)
