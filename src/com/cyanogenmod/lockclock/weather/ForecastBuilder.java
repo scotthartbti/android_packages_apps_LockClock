@@ -55,7 +55,7 @@ public class ForecastBuilder {
     public static View buildFullPanel(Context context, int resourceId, WeatherInfo w) {
 
         // Load some basic settings
-        LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE); 
+        LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         int color = Preferences.weatherFontColor(context);
         boolean invertLowHigh = Preferences.invertLowHighTemperature(context);
 
@@ -131,7 +131,7 @@ public class ForecastBuilder {
       }
 
       // Get things ready
-      LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE); 
+      LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
       int color = Preferences.weatherFontColor(context);
       boolean invertLowHigh = Preferences.invertLowHighTemperature(context);
 
@@ -144,8 +144,14 @@ public class ForecastBuilder {
       TimeZone MyTimezone = TimeZone.getDefault();
       Calendar calendar = new GregorianCalendar(MyTimezone);
 
-      // Iterate through the forecasts
-      for (DayForecast d : forecasts) {
+      int numForecasts = forecasts.size();
+      int itemSidePadding = context.getResources().getDimensionPixelSize(
+      R.dimen.forecast_item_padding_side);
+
+        // Iterate through the Forecasts
+        for (int count = 0; count < numForecasts; count ++) {
+            DayForecast d = forecasts.get(count);
+
           // Load the views
           View forecastItem = inflater.inflate(R.layout.forecast_item, null);
 
@@ -173,6 +179,13 @@ public class ForecastBuilder {
           // Add the view
           smallPanel.addView(forecastItem,
                   new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+
+          // Add a divider to the right for all but the last view
+          if (count < numForecasts - 1) {
+              View divider = new View(context);
+              smallPanel.addView(divider, new LinearLayout.LayoutParams(
+                      itemSidePadding, LinearLayout.LayoutParams.MATCH_PARENT));
+          }
       }
       return true;
     }
